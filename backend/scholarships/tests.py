@@ -72,7 +72,6 @@ class ScholarshipModelTests(TestCase):
 				self.create_scholarship(amount=Decimal("0.00"))
 
 
-
 class ScholarshipAPITests(APITestCase):
     def setUp(self):
         self.active_scholarship = Scholarship.objects.create(
@@ -197,3 +196,176 @@ class ScholarshipAPITests(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ScholarshipSearchAPITests(APITestCase):
+    def create_scholarship(self, **overrides):
+        values = {
+            "name": "Future Scholars Award",
+            "provider": "Scholyx Foundation",
+            "description": "Support for eligible students.",
+            "amount": Decimal("1000.00"),
+            "deadline": "2027-06-30",
+            "status": Scholarship.Status.ACTIVE,
+        }
+        values.update(overrides)
+        return Scholarship.objects.create(**values)
+
+    def search(self, **params):
+        return self.client.get(reverse("scholarship-list"), params)
+
+    def test_search_matches_name_provider_and_description(self):
+        name_match = self.create_scholarship(name="Merit award")
+        provider_match = self.create_scholarship(
+            name="Provider award",
+            provider="Merit foundation",
+        )
+        description_match = self.create_scholarship(
+            name="Description award",
+            description="A merit-based opportunity.",
+        )
+        self.create_scholarship(
+            name="Inactive merit award",
+            status=Scholarship.Status.CLOSED,
+        )
+
+        for expected in (name_match, provider_match, description_match):
+            with self.subTest(scholarship=expected.name):
+                response = self.search(search="merit")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(
+                    expected.pk,
+                    [item["id"] for item in response.data],
+                )
+                self.assertEqual(len(response.data), 3)
+
+    def test_amount_deadline_and_active_filters(self):
+        target = self.create_scholarship(
+            amount=Decimal("1000.00"),
+            deadline="2026-06-30",
+        )
+        self.create_scholarship(
+            name="Smaller award",
+            amount=Decimal("500.00"),
+            deadline="2027-06-30",
+        )
+        self.create_scholarship(
+            name="Inactive award",
+            status=Scholarship.Status.CLOSED,
+        )
+
+        for params in (
+            {"amount": "1000"},
+            {"min_amount": "750"},
+            {"deadline_before": "2026-12-31"},
+        ):
+            with self.subTest(params=params):
+                response = self.search(**params)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    [item["id"] for item in response.data],
+                    [target.pk],
+                )
+
+        response = self.search()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 2)
+
+    def test_eligibility_filters_match_option_codes_and_values(self):
+        target = self.create_scholarship(
+            gender=Scholarship.Gender.FEMALE,
+            year_of_study=Scholarship.YearOfStudy.FIRST,
+        )
+        options = {
+            "course": (Course, "BE_BTECH", "Engineering"),
+            "branch": (Branch, "CSE", "Computer Science"),
+            "category": (Category, "OBC", "Other Backward Class"),
+            "state": (State, "KA", "Karnataka"),
+            "district": (District, "MYS", "Mysuru"),
+        }
+        for field_name, (model, code, name) in options.items():
+            option = model.objects.create(code=code, name=name)
+            getattr(target, field_name).add(option)
+
+        self.create_scholarship(name="Unmatched scholarship")
+
+        for field_name, (model, code, name) in options.items():
+            for value in (code, name):
+                with self.subTest(field=field_name, value=value):
+                    response = self.search(**{field_name: value})
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(
+                        [item["id"] for item in response.data],
+                        [target.pk],
+                    )
+
+        for params in (
+            {"gender": "female"},
+            {"year_of_study": "1"},
+        ):
+            with self.subTest(params=params):
+                response = self.search(**params)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    [item["id"] for item in response.data],
+                    [target.pk],
+                )
+
+    def test_combined_filters_and_empty_results(self):
+        target = self.create_scholarship(
+            name="Merit engineering award",
+            amount=Decimal("15000.00"),
+            deadline="2026-10-01",
+            gender=Scholarship.Gender.FEMALE,
+            year_of_study=Scholarship.YearOfStudy.SECOND,
+        )
+        course = Course.objects.create(code="BE_BTECH", name="Engineering")
+        category = Category.objects.create(code="OBC", name="OBC")
+        state = State.objects.create(code="KA", name="Karnataka")
+        target.course.add(course)
+        target.category.add(category)
+        target.state.add(state)
+        self.create_scholarship(name="Other award")
+
+        response = self.search(
+            search="merit",
+            min_amount="10000",
+            deadline_before="2026-12-31",
+            course="BE_BTECH",
+            category="OBC",
+            state="KA",
+            gender="female",
+            year_of_study="2",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [target.pk])
+
+        response = self.search(search="does-not-exist")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+
+    def test_invalid_query_values_return_bad_request(self):
+        for params in (
+            {"min_amount": "not-a-number"},
+            {"deadline_before": "not-a-date"},
+            {"gender": "invalid"},
+            {"year_of_study": "9"},
+            {"course": "UNKNOWN"},
+        ):
+            with self.subTest(params=params):
+                response = self.search(**params)
+                self.assertEqual(response.status_code, 400)
+
+    def test_active_scholarship_detail_remains_available(self):
+        active = self.create_scholarship()
+        inactive = self.create_scholarship(
+            name="Closed scholarship",
+            status=Scholarship.Status.CLOSED,
+        )
+
+        response = self.client.get(f"/api/scholarships/{active.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["id"], active.pk)
+
+        response = self.client.get(f"/api/scholarships/{inactive.pk}/")
+        self.assertEqual(response.status_code, 404)
