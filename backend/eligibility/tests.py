@@ -151,6 +151,18 @@ class EligibilityServiceTests(TestCase):
         )
         self.assertEqual(result["overall_status"], "eligible")
 
+    def test_category_requirement_matches_profile_label(self):
+        self.scholarship.category.add(
+            Category.objects.create(code="GEN", name="General")
+        )
+        self.student.category = "GENERAL"
+        self.student.save()
+
+        result = evaluate_eligibility(self.scholarship, self.student)
+
+        self.assertEqual(result["criteria"]["category"]["status"], "passed")
+        self.assertEqual(result["overall_status"], "eligible")
+
     
     def test_category_requirement_fails(self):
         from scholarships.models import Category
@@ -218,6 +230,18 @@ class EligibilityServiceTests(TestCase):
         result = evaluate_eligibility(self.scholarship, self.student)
         self.assertEqual(result["criteria"]["course"]["status"], "passed")
 
+    def test_be_btech_matches_engineering_course(self):
+        self.scholarship.course.add(
+            Course.objects.create(code="engg", name="Engineering")
+        )
+        self.student.course = "BE_BTECH"
+        self.student.save()
+
+        result = evaluate_eligibility(self.scholarship, self.student)
+
+        self.assertEqual(result["criteria"]["course"]["status"], "passed")
+        self.assertEqual(result["overall_status"], "eligible")
+
     def test_branch_requirement_passes(self):
         from scholarships.models import Branch
 
@@ -228,6 +252,18 @@ class EligibilityServiceTests(TestCase):
 
         result = evaluate_eligibility(self.scholarship, self.student)
         self.assertEqual(result["criteria"]["branch"]["status"], "passed")
+
+    def test_branch_requirement_matches_profile_label(self):
+        self.scholarship.branch.add(
+            Branch.objects.create(code="CS", name="computer science")
+        )
+        self.student.branch = "CSE"
+        self.student.save()
+
+        result = evaluate_eligibility(self.scholarship, self.student)
+
+        self.assertEqual(result["criteria"]["branch"]["status"], "passed")
+        self.assertEqual(result["overall_status"], "eligible")
 
     def test_year_of_study_requirement_passes(self):
         self.scholarship.year_of_study = "3"
@@ -375,6 +411,7 @@ class EligibilityServiceTests(TestCase):
         result = evaluate_eligibility(self.scholarship, self.student)
 
         self.assertEqual(result["criteria"]["category"]["status"], "unknown")
+        self.assertEqual(result["overall_status"], "incomplete")
 
     def test_missing_state_returns_unknown(self):
         self.scholarship.state.add(

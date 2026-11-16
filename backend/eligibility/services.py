@@ -1,5 +1,52 @@
 from datetime import date
 
+VALUE_EQUIVALENCE_GROUPS = {
+    "course": (("BE_BTECH", "ENGG", "ENGINEERING"),),
+}
+
+
+def _normalize_eligibility_value(value):
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
+def _eligibility_value_keys(field_name, values):
+    keys = {
+        _normalize_eligibility_value(value.strip())
+        for value in values
+        if value and value.strip()
+    }
+
+    for group in VALUE_EQUIVALENCE_GROUPS.get(field_name, ()):
+        normalized_group = {
+            _normalize_eligibility_value(value) for value in group
+        }
+        if keys.intersection(normalized_group):
+            keys.update(normalized_group)
+
+    return keys
+
+
+def _matches_profile_value(student, field_name, option):
+    student_value = getattr(student, field_name)
+    if not student_value or not student_value.strip():
+        return False
+
+    profile_values = [student_value]
+    normalized_student_value = _normalize_eligibility_value(
+        student_value.strip()
+    )
+    for code, label in student._meta.get_field(field_name).choices:
+        if _normalize_eligibility_value(code) == normalized_student_value:
+            profile_values.append(label)
+            break
+
+    scholarship_values = [option.code or "", option.name]
+    return bool(
+        _eligibility_value_keys(field_name, profile_values)
+        & _eligibility_value_keys(field_name, scholarship_values)
+    )
+
+
 def check_percentage(scholarship, student):
     minimum = scholarship.minimum_percentage
     percentage = student.percentage
@@ -164,14 +211,14 @@ def check_category(scholarship, student):
             "reason": "No category restriction.",
         }
 
-    if not student_category:
+    if not student_category or not student_category.strip():
         return {
             "status": "unknown",
             "reason": "Student category has not been provided.",
         }
 
     for category in allowed_categories:
-        if category.code and category.code.upper() == student_category.upper():
+        if _matches_profile_value(student, "category", category):
             return {
                 "status": "passed",
                 "reason": f"Student category {student_category} is accepted.",
@@ -256,14 +303,14 @@ def check_course(scholarship, student):
             "reason": "No course restriction.",
         }
 
-    if not student_course:
+    if not student_course or not student_course.strip():
         return {
             "status": "unknown",
             "reason": "Student course has not been provided.",
         }
 
     for course in allowed_courses:
-        if course.code and course.code.upper() == student_course.upper():
+        if _matches_profile_value(student, "course", course):
             return {
                 "status": "passed",
                 "reason": f"Student course {student_course} is accepted.",
@@ -285,14 +332,14 @@ def check_branch(scholarship, student):
             "reason": "No branch restriction.",
         }
 
-    if not student_branch:
+    if not student_branch or not student_branch.strip():
         return {
             "status": "unknown",
             "reason": "Student branch has not been provided.",
         }
 
     for branch in allowed_branches:
-        if branch.code and branch.code.upper() == student_branch.upper():
+        if _matches_profile_value(student, "branch", branch):
             return {
                 "status": "passed",
                 "reason": f"Student branch {student_branch} is accepted.",
