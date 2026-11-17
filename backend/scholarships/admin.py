@@ -21,6 +21,7 @@ class ScholarshipAdmin(admin.ModelAdmin):
 	list_filter = ("status", "gender", "year_of_study", "pwd", "minority")
 	search_fields = ("name", "provider")
 	filter_horizontal = ("category", "state", "district", "course", "branch")
+	date_hierarchy = "deadline"
 	inlines = (RequiredDocumentInline,)
 
 

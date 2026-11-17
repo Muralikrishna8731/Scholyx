@@ -1,5 +1,6 @@
 
 from django.contrib.auth.models import User
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -8,6 +9,69 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from scholarships.models import Scholarship
 
 from .models import StudentProfile
+
+
+class AdminInterfaceTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="AdminPass!2026",
+        )
+        self.student = User.objects.create_user(
+            username="student_admin_test",
+            email="student@example.com",
+            password="StudentPass!2026",
+        )
+        self.profile = StudentProfile.objects.create(
+            user=self.student,
+            full_name="Admin Test Student",
+            college="Test College",
+        )
+
+        self.scholarship = Scholarship.objects.create(
+            name="Admin Test Scholarship",
+            provider="Test Foundation",
+            description="Test scholarship",
+            amount="5000.00",
+            deadline="2027-12-31",
+            status=Scholarship.Status.ACTIVE,
+        )
+
+    def test_admin_dashboard_displays_platform_counts(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Registered students")
+        self.assertContains(response, "Active scholarships")
+        self.assertContains(response, "Applied applications")
+
+    def test_student_cannot_access_admin(self):
+        self.client.force_login(self.student)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertIn(response.status_code, (302, 403))
+
+    def test_admin_can_search_and_open_student_profile(self):
+        self.client.force_login(self.admin)
+
+        search_url = reverse("admin:accounts_studentprofile_changelist")
+        response = self.client.get(search_url, {"q": "student_admin_test"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Admin Test Student")
+
+        detail_url = reverse(
+            "admin:accounts_studentprofile_change",
+            args=(self.profile.pk,),
+        )
+        response = self.client.get(detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application history")
 
 
 class StudentRegistrationTests(APITestCase):
