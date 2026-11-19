@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ScholarshipCard from "../components/ScholarshipCard";
 
 function Home() {
   const [scholarships, setScholarships] = useState([]);
@@ -12,14 +13,18 @@ function Home() {
   useEffect(() => {
     const fetchScholarships = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/scholarships/");
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/scholarships/"
+        );
 
         if (!response.ok) {
           throw new Error("Unable to load scholarships.");
         }
 
         const data = await response.json();
-        setScholarships(Array.isArray(data) ? data : data.results || []);
+        setScholarships(
+          Array.isArray(data) ? data : data.results || []
+        );
       } catch (err) {
         setError(err.message || "Something went wrong.");
       } finally {
@@ -43,10 +48,12 @@ function Home() {
         <section className="hero">
           <div className="hero-content">
             <span className="hero-tag">YOUR FUTURE STARTS HERE</span>
+
             <h1>
               Find the Right Scholarship.
               <span> Shape Your Future.</span>
             </h1>
+
             <p>
               Discover scholarship opportunities that match your goals.
               Check your eligibility and move closer to your dreams.
@@ -59,11 +66,14 @@ function Home() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <button onClick={() =>
-                document.getElementById("scholarships")?.scrollIntoView({
-                  behavior: "smooth",
-                })
-              }>
+
+              <button
+                onClick={() =>
+                  document.getElementById("scholarships")?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+                }
+              >
                 Explore Scholarships
               </button>
             </div>
@@ -80,7 +90,9 @@ function Home() {
               <p>Deserves Every Opportunity</p>
               <div className="visual-line"></div>
               <div className="visual-line short"></div>
-              <span className="visual-badge">Explore. Apply. Achieve.</span>
+              <span className="visual-badge">
+                Explore. Apply. Achieve.
+              </span>
             </div>
           </div>
         </section>
@@ -89,7 +101,9 @@ function Home() {
           <div className="section-heading">
             <span className="section-tag">OPPORTUNITIES FOR YOU</span>
             <h2>Featured Scholarships</h2>
-            <p>Explore available scholarships and find the right opportunity.</p>
+            <p>
+              Explore available scholarships and find the right opportunity.
+            </p>
           </div>
 
           {loading ? (
@@ -105,29 +119,10 @@ function Home() {
           ) : (
             <div className="scholarship-grid">
               {filteredScholarships.slice(0, 6).map((scholarship) => (
-                <div className="scholarship-card" key={scholarship.id}>
-                  <span className="card-icon">🎓</span>
-                  <h3>{scholarship.name}</h3>
-                  <p className="provider">
-                    {scholarship.provider || "Scholarship Provider"}
-                  </p>
-                  <div className="card-details">
-                    <p>
-                      <strong>Amount:</strong>{" "}
-                      {scholarship.amount ?? "Not specified"}
-                    </p>
-                    <p>
-                      <strong>Deadline:</strong>{" "}
-                      {scholarship.deadline || "Not specified"}
-                    </p>
-                  </div>
-                  <button
-                    className="details-btn"
-                    onClick={() => alert("Scholarship details will be available soon!")}
-                  >
-                    View Details
-                  </button>
-                </div>
+                <ScholarshipCard
+                  key={scholarship.id}
+                  scholarship={scholarship}
+                />
               ))}
             </div>
           )}
@@ -137,7 +132,9 @@ function Home() {
           <div className="section-heading">
             <span className="section-tag">SIMPLE AND EASY</span>
             <h2>How Scholyx Works</h2>
-            <p>Three simple steps to discover your scholarship opportunities.</p>
+            <p>
+              Three simple steps to discover your scholarship opportunities.
+            </p>
           </div>
 
           <div className="steps-grid">
@@ -167,6 +164,7 @@ function Home() {
         <section className="cta-section">
           <h2>Ready to Find Your Opportunity?</h2>
           <p>Create your profile and start exploring scholarships today.</p>
+
           <button
             onClick={() => window.location.href = "/register"}
             className="cta-button"

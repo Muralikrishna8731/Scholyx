@@ -5,9 +5,11 @@ import { Link } from "react-router-dom";
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const closeMenu = () => setMenuOpen(false);
+
   return (
     <nav className="navbar">
-      <Link to="/" className="logo">
+      <Link to="/" className="logo" onClick={closeMenu}>
         Schol<span>yx</span>
       </Link>
 
@@ -21,18 +23,20 @@ function Navbar() {
       </button>
 
       <div className={`nav-links ${menuOpen ? "active" : ""}`}>
-        <a href="#scholarships" onClick={() => setMenuOpen(false)}>
+        <Link to="/scholarships" onClick={closeMenu}>
           Scholarships
-        </a>
-        <a href="#about" onClick={() => setMenuOpen(false)}>
+        </Link>
+
+        <Link to="/#about" onClick={closeMenu}>
           About
-        </a>
+        </Link>
 
         <div className="nav-buttons">
-          <Link to="/login" className="login-btn">
+          <Link to="/login" className="login-btn" onClick={closeMenu}>
             Login
           </Link>
-          <Link to="/register" className="get-started-btn">
+
+          <Link to="/register" className="get-started-btn" onClick={closeMenu}>
             Get Started
           </Link>
         </div>
