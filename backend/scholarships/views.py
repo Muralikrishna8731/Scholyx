@@ -1,14 +1,22 @@
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 
 from .models import Scholarship
-from .serializers import ScholarshipQuerySerializer, ScholarshipSerializer
-
-
+from .serializers import (
+    ScholarshipListSerializer,
+    ScholarshipQuerySerializer,
+    ScholarshipSerializer,
+)
+class ScholarshipPagination(PageNumberPagination):
+    page_size = 9
+    page_size_query_param = "page_size"
+    max_page_size = 30
 class ScholarshipListView(generics.ListAPIView):
-    serializer_class = ScholarshipSerializer
+    serializer_class = ScholarshipListSerializer
     permission_classes = [AllowAny]
+    pagination_class = ScholarshipPagination
 
     def get_queryset(self):
         query_serializer = ScholarshipQuerySerializer(

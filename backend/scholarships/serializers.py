@@ -66,6 +66,18 @@ class ScholarshipSerializer(serializers.ModelSerializer):
             "required_documents",
         ]
 
+class ScholarshipListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Scholarship
+        fields = [
+            "id",
+            "name",
+            "provider",
+            "description",
+            "amount",
+            "deadline",
+        ]
+
 
 class ScholarshipQuerySerializer(serializers.Serializer):
     search = serializers.CharField(required=False, allow_blank=False)

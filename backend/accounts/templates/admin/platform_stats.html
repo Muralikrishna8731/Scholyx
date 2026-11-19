@@ -1,0 +1,54 @@
+<style>
+  .platform-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .platform-stat-card {
+    border: 1px solid var(--hairline-color);
+    border-radius: 4px;
+    background: var(--body-bg);
+    padding: 14px;
+  }
+  .platform-stat-card strong {
+    display: block;
+    font-size: 24px;
+  }
+  .platform-stat-card span {
+    color: var(--body-quiet-color);
+  }
+</style>
+
+<div class="platform-stats">
+  <div class="platform-stat-card">
+    <strong>{{ student_count }}</strong>
+    <span>Registered students</span>
+  </div>
+  <div class="platform-stat-card">
+    <strong>{{ scholarship_count }}</strong>
+    <span>Total scholarships</span>
+  </div>
+  <div class="platform-stat-card">
+    <strong>{{ application_count }}</strong>
+    <span>Total applications</span>
+  </div>
+</div>
+
+<div class="platform-stats">
+  {% for item in scholarship_status_counts %}
+    <div class="platform-stat-card">
+      <strong>{{ item.count }}</strong>
+      <span>{{ item.label }} scholarships</span>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="platform-stats">
+  {% for item in application_status_counts %}
+    <div class="platform-stat-card">
+      <strong>{{ item.count }}</strong>
+      <span>{{ item.label }} applications</span>
+    </div>
+  {% endfor %}
+</div>
